@@ -2,12 +2,17 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ExcelJS = require('exceljs');
 const path = require('path');
+const cors = require('cors'); // Import the cors middleware
+
 
 const app = express();
 const port = process.env.PORT || 3001; // Use the PORT env variable provided by Render
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
+
+const cors = require('cors'); // Import the cors middleware
+
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
