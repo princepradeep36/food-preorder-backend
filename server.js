@@ -11,9 +11,7 @@ app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
 
-const cors = require('cors'); // Import the cors middleware
-
-
+app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
