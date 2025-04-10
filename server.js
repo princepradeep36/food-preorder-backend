@@ -21,7 +21,7 @@ function generate5DigitOrderNumberWithTime() {
 
 // Database connection pool configuration
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // Use the DATABASE_URL environment variable provided by Render
+    connectionString: "postgresql://food_pre_order_db_user:PH3UMYXXsYSRnoKWN6vJegvQsDujj6LB@dpg-cvrs78muk2gs73bja5fg-a.frankfurt-postgres.render.com/food_pre_order_db", // Use the DATABASE_URL environment variable provided by Render
     ssl: {
         rejectUnauthorized: false // Required for Render's free PostgreSQL tier
     }
