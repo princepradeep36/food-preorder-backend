@@ -27,10 +27,11 @@ const pool = new Pool({
     }
 });
 
-// Function to insert order data into the database
 async function saveOrderToDatabase(order) {
     const client = await pool.connect();
     try {
+        await client.query('BEGIN'); // Start a transaction
+
         const orderDate = new Date();
         const customerName = order.customer.name;
         const customerPhone = order.customer.phone;
@@ -48,12 +49,31 @@ async function saveOrderToDatabase(order) {
                     'INSERT INTO order_items (order_id, vendor_name, item_name, quantity, price) VALUES ($1, $2, $3, $4, $5)',
                     [orderId, vendorName, itemName, item.quantity, item.price]
                 );
+
+                // Update the vendor summary
+                await updateVendorSummary(client, vendorName, itemName, item.quantity);
             }
         }
+
+        await client.query('COMMIT'); // Commit the transaction
         return orderId;
+    } catch (error) {
+        await client.query('ROLLBACK'); // Rollback the transaction on error
+        console.error('Error saving order:', error);
+        throw error;
     } finally {
         client.release();
     }
+}
+
+async function updateVendorSummary(client, vendorName, itemName, quantity) {
+    await client.query(
+        `INSERT INTO vendor_summary (vendor_name, item_name, total_quantity)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (vendor_name, item_name)
+         DO UPDATE SET total_quantity = vendor_summary.total_quantity + $3`,
+        [vendorName, itemName, quantity]
+    );
 }
 
 
