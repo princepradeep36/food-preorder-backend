@@ -21,12 +21,11 @@ function generate5DigitOrderNumberWithTime() {
 
 // Database connection pool configuration
 const pool = new Pool({
-    host: dpg-cvrs78muk2gs73bja5fg-a,       // The hostname or IP address of the DB server
-    port: 5432,       // The port PostgreSQL is listening on (usually 5432)
-    database: food_pre_order_db,   // The name of your database
-    user: food_pre_order_db_user,       // The username to connect with
-    password: PH3UMYXXsYSRnoKWN6vJegvQsDujj6LB, // The password for the user
-    });
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Required for Render's free PostgreSQL tier
+    }
+});
 
 // Function to insert order data into the database
 async function saveOrderToDatabase(order) {
