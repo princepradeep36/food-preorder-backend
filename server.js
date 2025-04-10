@@ -126,3 +126,18 @@ app.post('/api/submit-order', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
+
+app.get('/api/download-orders', (req, res) => {
+    const filePath = path.join(__dirname, 'customer_orders.xlsx'); // Adjust path if needed
+
+    fs.readFile(filePath, (err, data) => {
+        if (err) {
+            console.error('Error reading Excel file:', err);
+            return res.status(500).send('Error reading the order file.');
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="customer_orders.xlsx"');
+        res.send(data);
+    });
+});
