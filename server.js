@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 async function saveOrderToExcel(order) {
     const workbook = new ExcelJS.Workbook();
-    const filename = 'customer_orders.xlsx';
+    const filename = 'customer_orders_new.xlsx';
     let customerWorksheet;
     let summaryWorksheet;
     const currentOrderVendorQuantities = {};
@@ -129,7 +129,7 @@ app.listen(port, () => {
 });
 
 app.get('/api/download-orders', (req, res) => {
-    const filePath = path.join(__dirname, 'customer_orders.xlsx'); // Adjust path if needed
+    const filePath = path.join(__dirname, 'customer_orders_new.xlsx'); // Adjust path if needed
 
     fs.readFile(filePath, (err, data) => {
         if (err) {
