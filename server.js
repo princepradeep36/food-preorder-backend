@@ -1,48 +1,16 @@
 const express = require('express');
-const fs = require('fs');
 const bodyParser = require('body-parser');
 const ExcelJS = require('exceljs');
 const path = require('path');
-const cors = require('cors'); // Import the cors middleware
-
+const cors = require('cors');
+const { v4: uuidv4 } = require('uuid'); // Import the uuid library for generating unique IDs
 
 const app = express();
-const port = process.env.PORT || 3001; // Use the PORT env variable provided by Render
-app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-});
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.post('/api/submit-order', async (req, res) => {
-    const orderData = req.body;
-    console.log('Received order data:', orderData);
-
-    try {
-        await saveOrderToExcel(orderData);
-        res.json({ message: 'Order received successfully!' });
-    } catch (error) {
-        console.error('Error processing order in route:', error);
-        res.status(500).json({ error: 'Failed to process order.' });
-    }
-});
-
-app.get('/api/download-orders', (req, res) => {
-    const filePath = path.join(__dirname, 'customer_orders.xlsx'); // Adjust path if needed
-
-    fs.readFile(filePath, (err, data) => {
-        if (err) {
-            console.error('Error reading Excel file:', err);
-            return res.status(500).send('Error reading the order file.');
-        }
-
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="customer_orders.xlsx"');
-        res.send(data);
-    });
-});
 
 async function saveOrderToExcel(order) {
     const workbook = new ExcelJS.Workbook();
@@ -59,12 +27,14 @@ async function saveOrderToExcel(order) {
     } catch (error) {
         customerWorksheet = workbook.addWorksheet('Customer Orders');
         summaryWorksheet = workbook.addWorksheet('Vendor Summary');
-        customerWorksheet.addRow(['Order Date', 'Customer Name', 'Phone Number', 'Vendor', 'Item', 'Quantity', 'Price', 'Total']);
+        customerWorksheet.addRow(['Order Number', 'Order Date', 'Customer Name', 'Phone Number', 'Vendor', 'Item', 'Quantity', 'Price', 'Total']);
         summaryWorksheet.addRow(['Vendor', 'Item', 'Total Quantity']);
     }
 
     // --- Customer Order Details ---
     const orderDate = new Date().toLocaleString();
+    const orderNumber = uuidv4(); // Generate a unique order ID
+
     for (const vendorName in order.items) {
         if (!currentOrderVendorQuantities[vendorName]) {
             currentOrderVendorQuantities[vendorName] = {};
@@ -72,6 +42,7 @@ async function saveOrderToExcel(order) {
         for (const itemName in order.items[vendorName]) {
             const item = order.items[vendorName][itemName];
             customerWorksheet.addRow([
+                orderNumber, // Add the order number
                 orderDate,
                 order.customer.name,
                 order.customer.phone,
@@ -87,7 +58,6 @@ async function saveOrderToExcel(order) {
     customerWorksheet.addRow([]); // Add an empty row for spacing
 
     // --- Aggregate Vendor Summary ---
-    // Read existing summary data
     const existingSummaryData = {};
     if (summaryWorksheet) {
         summaryWorksheet.eachRow((row, rowNumber) => {
@@ -103,10 +73,8 @@ async function saveOrderToExcel(order) {
                 }
             }
         });
-        console.log('Existing Summary Data:', existingSummaryData);
     }
 
-    // Merge current order quantities with existing totals
     for (const vendorName in currentOrderVendorQuantities) {
         if (!aggregatedVendorTotals[vendorName]) {
             aggregatedVendorTotals[vendorName] = { ...existingSummaryData[vendorName] };
@@ -115,14 +83,10 @@ async function saveOrderToExcel(order) {
             aggregatedVendorTotals[vendorName][itemName] = (aggregatedVendorTotals[vendorName][itemName] || 0) + currentOrderVendorQuantities[vendorName][itemName];
         }
     }
-    console.log('Aggregated Vendor Totals:', aggregatedVendorTotals);
 
-    // Clear the existing summary sheet (except the header)
     const headerRowCount = 1;
     if (summaryWorksheet) {
         summaryWorksheet.spliceRows(headerRowCount + 1, summaryWorksheet.rowCount - headerRowCount);
-
-        // Write the aggregated totals to the summary sheet
         for (const vendorName in aggregatedVendorTotals) {
             for (const itemName in aggregatedVendorTotals[vendorName]) {
                 summaryWorksheet.addRow([vendorName, itemName, aggregatedVendorTotals[vendorName][itemName]]);
@@ -132,15 +96,28 @@ async function saveOrderToExcel(order) {
     }
 
     try {
-        console.log('Before writing to Excel file');
         await workbook.xlsx.writeFile(filename);
-        console.log('After writing to Excel file');
         console.log('Order data saved to Excel.');
     } catch (error) {
         console.error('Error writing to Excel file:', error);
     }
+
+    return orderNumber; // Return the generated order number
 }
 
+app.post('/api/submit-order', async (req, res) => {
+    const orderData = req.body;
+    console.log('Received order data:', orderData);
+
+    try {
+        const orderNumber = await saveOrderToExcel(orderData);
+        res.json({ message: 'Order received successfully!', orderNumber: orderNumber }); // Send back the order number
+    } catch (error) {
+        console.error('Error processing order in route:', error);
+        res.status(500).json({ error: 'Failed to process order.' });
+    }
+});
+
 app.listen(port, () => {
-    console.log(`Server listening at http://localhost:${port}`);
+    console.log(`Server listening on port ${port}`);
 });
