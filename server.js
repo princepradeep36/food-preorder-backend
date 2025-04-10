@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid'); // Import the uuid library for generating unique IDs
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -33,7 +32,7 @@ async function saveOrderToExcel(order) {
 
     // --- Customer Order Details ---
     const orderDate = new Date().toLocaleString();
-    const orderNumber = uuidv4(); // Generate a unique order ID
+    const orderNumber = String(generate5DigitOrderNumberWithTime()).padStart(5, '0'); // Generate a unique order ID
 
     for (const vendorName in order.items) {
         if (!currentOrderVendorQuantities[vendorName]) {
@@ -103,6 +102,12 @@ async function saveOrderToExcel(order) {
     }
 
     return orderNumber; // Return the generated order number
+}
+
+function generate5DigitOrderNumberWithTime() {
+    const timestampPart = Date.now().toString().slice(-3); // Last 3 digits of the timestamp
+    const randomPart = Math.floor(Math.random() * 100).toString().padStart(2, '0'); // 2 random digits
+    return parseInt(timestampPart + randomPart);
 }
 
 app.post('/api/submit-order', async (req, res) => {
